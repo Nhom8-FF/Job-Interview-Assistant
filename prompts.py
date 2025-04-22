@@ -47,3 +47,8 @@ def get_interview_context_prompt(document_content):
 
 I have analyzed the following document:
 
+{document_content}
+
+Please use this information to provide more personalized and relevant interview assistance.
+"""
+
