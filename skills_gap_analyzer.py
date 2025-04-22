@@ -4,158 +4,172 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
 import plotly.graph_objects as go
-from gemini_helper import generate_response
 from prompts import SYSTEM_PROMPT
+from gemini_helper import generate_response
 
 def extract_skills(text):
     """
     Trích xuất danh sách kỹ năng từ văn bản sử dụng cả xử lý regex và AI
     """
-    # Loại bỏ các ký tự đặc biệt và chuyển về chữ thường
-    text = re.sub(r'[^\w\s]', ' ', text.lower())
+    # Pattern cơ bản để tìm kỹ năng
+    skill_pattern = r"(?:[\•\-\★\✓\✔]\s*)?([A-Za-z0-9][\w\+\#\.\-\s]*(?:Framework|Language|API|SDK|Library|Technologies|Systems|Software|Development|Programming|Design|Analysis|Management|Marketing|Analytics|Engineering|Security|Architecture|Cloud|DevOps|Testing|UI\/UX|Database|SQL|Python|Java|JavaScript|React|Angular|Vue|Node\.js|PHP|C\+\+|Swift|Go|Rust|TypeScript|AWS|Azure|GCP|Docker|Kubernetes|Linux|Git|Machine Learning|ML|AI|NLP|Deep Learning|Data Science|Scrum|Agile|Kanban|SEO|SEM|Content Marketing|Social Media|Email Marketing|Google Analytics|Photoshop|Illustrator|Sketch|Figma|XD|HTML|CSS|SASS|LESS)(?:\s+\d+(?:\.\d+)?\s+(?:years|yrs))?)"
     
-    # Danh sách từ khóa kỹ năng phổ biến
-    common_skills = [
-        "python", "java", "javascript", "react", "angular", "vue", "node.js", "html", "css",
-        "sql", "nosql", "mongodb", "mysql", "postgresql", "oracle", "aws", "azure", "gcp",
-        "docker", "kubernetes", "ci/cd", "git", "agile", "scrum", "leadership", "management",
-        "communication", "teamwork", "problem solving", "critical thinking", "creativity",
-        "data analysis", "machine learning", "ai", "deep learning", "nlp", "computer vision",
-        "excel", "word", "powerpoint", "presentation", "project management", "marketing",
-        "sales", "customer service", "accounting", "finance", "human resources", "recruiting"
-    ]
+    # Tìm tất cả các kỹ năng sử dụng pattern
+    skills_found = re.findall(skill_pattern, text, re.IGNORECASE)
     
-    # Tìm kiếm các kỹ năng trong văn bản
-    found_skills = []
-    for skill in common_skills:
-        if re.search(r'\b' + re.escape(skill) + r'\b', text):
-            found_skills.append(skill)
+    # Loại bỏ duplicates và whitespace
+    cleaned_skills = list(set([skill.strip() for skill in skills_found if len(skill.strip()) > 2]))
     
-    return found_skills
+    return cleaned_skills
 
 def analyze_skills_gap(resume_text, job_description, gemini_model, language="vi"):
     """
     Phân tích khoảng cách kỹ năng giữa sơ yếu lý lịch và mô tả công việc
     """
-    # Trích xuất kỹ năng từ cả hai văn bản
-    resume_skills = set(extract_skills(resume_text))
-    job_skills = set(extract_skills(job_description))
-    
-    # Phân tích khoảng cách
-    matching_skills = resume_skills.intersection(job_skills)
-    missing_skills = job_skills - resume_skills
-    extra_skills = resume_skills - job_skills
-    
-    # Tính toán chỉ số phù hợp
-    if len(job_skills) > 0:
-        match_percentage = (len(matching_skills) / len(job_skills)) * 100
-    else:
-        match_percentage = 0
-    
-    # Phần AI phân tích sâu hơn
-    language_instruction = "Trả lời bằng tiếng Việt." if language == "vi" else "Answer in English."
-    
-    analysis_prompt = f"""
-Phân tích chi tiết khoảng cách kỹ năng giữa sơ yếu lý lịch và mô tả công việc sau:
+    # Tạo prompt phân tích
+    if language == "vi":
+        analysis_prompt = f"""
+Hãy phân tích khoảng cách kỹ năng giữa CV và mô tả công việc dưới đây:
 
-Sơ yếu lý lịch:
+CV:
 {resume_text}
 
 Mô tả công việc:
 {job_description}
 
-Hãy cung cấp:
-1. Đánh giá phần trăm kỹ năng phù hợp
-2. Danh sách kỹ năng thiếu quan trọng nhất
-3. Đề xuất cách thu hẹp khoảng cách kỹ năng
-4. Xếp hạng mức độ phù hợp tổng thể (1-10)
-5. Điểm mạnh độc đáo từ sơ yếu lý lịch
+Phân tích theo các tiêu chí sau:
+1. Các kỹ năng và yêu cầu chính trong mô tả công việc
+2. Các kỹ năng và kinh nghiệm của ứng viên từ CV
+3. Kỹ năng trùng khớp (đánh giá % trùng khớp)
+4. Kỹ năng thiếu (đánh giá % thiếu hụt)
+5. Kỹ năng vượt trội của ứng viên không được nhắc trong mô tả công việc (điểm mạnh)
+6. Đánh giá tổng thể về sự phù hợp (thang điểm 1-10)
+7. Đề xuất cải thiện cụ thể
+
+Định dạng kết quả thành các phần rõ ràng với tiêu đề và liệt kê cụ thể từng kỹ năng.
+Đảm bảo cung cấp dữ liệu phần trăm về mức độ phù hợp, khoảng cách kỹ năng, số điểm đánh giá tổng thể để sử dụng cho biểu đồ.
+"""
+    else:
+        analysis_prompt = f"""
+Analyze the skills gap between the resume and job description below:
+
+Resume:
+{resume_text}
+
+Job Description:
+{job_description}
+
+Analyze according to these criteria:
+1. Key skills and requirements in the job description
+2. Candidate's skills and experience from the resume
+3. Matching skills (evaluate % match)
+4. Missing skills (evaluate % gap)
+5. Candidate's exceptional skills not mentioned in the job description (strengths)
+6. Overall assessment of fit (scale of 1-10)
+7. Specific improvement suggestions
+
+Format the results into clear sections with headers and list each skill specifically.
+Make sure to provide percentage data about the level of fit, skills gap, and overall assessment score for use in charts.
 """
     
+    # Tạo hướng dẫn ngôn ngữ
+    language_instruction = "Trả lời bằng tiếng Việt." if language == "vi" else "Answer in English."
+    
+    # Tạo system prompt
+    system_prompt = f"{SYSTEM_PROMPT}\n\nBạn là một chuyên gia phân tích kỹ năng và tuyển dụng với nhiều năm kinh nghiệm.\n\n{language_instruction}"
+    
+    # Tạo tin nhắn
     messages = [
-        {"role": "system", "content": f"{SYSTEM_PROMPT}\n\nBạn là chuyên gia phân tích khoảng cách kỹ năng. {language_instruction}"},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": analysis_prompt}
     ]
     
-    ai_analysis = generate_response(gemini_model, messages)
+    # Gọi Gemini API
+    analysis = generate_response(gemini_model, messages)
     
-    return {
-        "matching_skills": list(matching_skills),
-        "missing_skills": list(missing_skills),
-        "extra_skills": list(extra_skills),
-        "match_percentage": match_percentage,
-        "ai_analysis": ai_analysis
-    }
+    return analysis
 
 def display_skills_gap_analysis(analysis, language="vi"):
     """
     Hiển thị phân tích khoảng cách kỹ năng dưới dạng trực quan
     """
-    if language == "vi":
-        labels = ["Kỹ năng phù hợp", "Kỹ năng còn thiếu"]
-        title = "Phân tích khoảng cách kỹ năng"
-        match_text = "Phù hợp"
-        missing_text = "Còn thiếu"
-        extra_text = "Kỹ năng bổ sung"
-        ai_text = "Phân tích AI"
-    else:
-        labels = ["Matching Skills", "Missing Skills"]
-        title = "Skills Gap Analysis"
-        match_text = "Matching"
-        missing_text = "Missing"
-        extra_text = "Additional Skills"
-        ai_text = "AI Analysis"
-    
-    # Tạo dữ liệu cho biểu đồ
-    values = [analysis['match_percentage'], 100 - analysis['match_percentage']]
-    
-    # Tạo biểu đồ tròn với Plotly
-    fig = go.Figure(data=[go.Pie(
-        labels=labels,
-        values=values,
-        hole=.4,
-        marker_colors=['#4CAF50', '#F44336']
-    )])
-    
-    fig.update_layout(
-        title_text=title,
-        annotations=[dict(text=f"{analysis['match_percentage']:.1f}%", x=0.5, y=0.5, font_size=20, showarrow=False)]
-    )
-    
-    # Hiển thị biểu đồ
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Hiển thị danh sách kỹ năng
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown(f"### {match_text} ({len(analysis['matching_skills'])})")
-        if analysis['matching_skills']:
-            for skill in analysis['matching_skills']:
-                st.markdown(f"✅ {skill}")
-        else:
-            st.markdown("*Không tìm thấy kỹ năng phù hợp*")
-    
-    with col2:
-        st.markdown(f"### {missing_text} ({len(analysis['missing_skills'])})")
-        if analysis['missing_skills']:
-            for skill in analysis['missing_skills']:
-                st.markdown(f"❌ {skill}")
-        else:
-            st.markdown("*Không có kỹ năng còn thiếu*")
-    
-    st.markdown(f"### {extra_text} ({len(analysis['extra_skills'])})")
-    if analysis['extra_skills']:
-        extra_skills_cols = st.columns(3)
-        for i, skill in enumerate(analysis['extra_skills']):
-            with extra_skills_cols[i % 3]:
-                st.markdown(f"➕ {skill}")
-    else:
-        st.markdown("*Không có kỹ năng bổ sung*")
-    
-    # Hiển thị phân tích AI
-    st.markdown(f"## {ai_text}")
-    st.markdown(analysis['ai_analysis'])
+    try:
+        # Trích xuất phần trăm từ nội dung phân tích
+        match_pattern = r"(\d+)%\s*(?:trùng khớp|match)"
+        gap_pattern = r"(\d+)%\s*(?:thiếu|gap|không phù hợp|missing)"
+        score_pattern = r"(\d+(?:\.\d+)?)\s*(?:\/|trên)\s*10"
+        
+        match_percent = re.search(match_pattern, analysis, re.IGNORECASE)
+        gap_percent = re.search(gap_pattern, analysis, re.IGNORECASE)
+        score = re.search(score_pattern, analysis, re.IGNORECASE)
+        
+        match_value = int(match_percent.group(1)) if match_percent else 50
+        gap_value = int(gap_percent.group(1)) if gap_percent else 50
+        score_value = float(score.group(1)) if score else 5.0
+        
+        # Đảm bảo không vượt quá 100%
+        if match_value + gap_value > 100:
+            total = match_value + gap_value
+            match_value = int((match_value / total) * 100)
+            gap_value = 100 - match_value
+        
+        # Tạo dữ liệu cho biểu đồ
+        labels = ["Kỹ năng phù hợp", "Khoảng cách kỹ năng"] if language == "vi" else ["Matching Skills", "Skills Gap"]
+        values = [match_value, gap_value]
+        colors = ['#4CAF50', '#FF5252']
+        
+        # Hiển thị biểu đồ tròn
+        fig1 = go.Figure(data=[go.Pie(
+            labels=labels,
+            values=values,
+            hole=.4,
+            marker_colors=colors
+        )])
+        
+        fig1.update_layout(
+            title_text="Phân tích khoảng cách kỹ năng" if language == "vi" else "Skills Gap Analysis",
+            annotations=[dict(text=f"{match_value}%", x=0.5, y=0.5, font_size=20, showarrow=False)]
+        )
+        
+        st.plotly_chart(fig1)
+        
+        # Hiển thị điểm số
+        fig2 = go.Figure(go.Indicator(
+            mode = "gauge+number",
+            value = score_value,
+            domain = {'x': [0, 1], 'y': [0, 1]},
+            title = {'text': "Đánh giá tổng thể" if language == "vi" else "Overall Assessment"},
+            gauge = {
+                'axis': {'range': [0, 10], 'tickwidth': 1, 'tickcolor': "darkblue"},
+                'bar': {'color': "darkblue"},
+                'bgcolor': "white",
+                'borderwidth': 2,
+                'bordercolor': "gray",
+                'steps': [
+                    {'range': [0, 3], 'color': '#FF5252'},
+                    {'range': [3, 7], 'color': '#FFC107'},
+                    {'range': [7, 10], 'color': '#4CAF50'}
+                ],
+                'threshold': {
+                    'line': {'color': "red", 'width': 4},
+                    'thickness': 0.75,
+                    'value': score_value
+                }
+            }
+        ))
+        
+        fig2.update_layout(
+            margin=dict(l=20, r=20, t=50, b=20),
+            height=250,
+        )
+        
+        st.plotly_chart(fig2)
+        
+    except Exception as e:
+        st.error(f"Lỗi khi tạo biểu đồ: {str(e)}")
+        st.write("Hiển thị phân tích văn bản")
+        st.write(analysis)
+
 
 def skills_gap_analysis_page(gemini_model):
     """
@@ -165,38 +179,53 @@ def skills_gap_analysis_page(gemini_model):
     
     if language == "vi":
         st.title("Phân tích khoảng cách kỹ năng")
-        st.markdown("Phân tích sự phù hợp giữa CV của bạn và mô tả công việc")
+        st.markdown("Tìm hiểu mức độ phù hợp của bạn với công việc mong muốn và cách cải thiện kỹ năng")
         
-        resume_label = "Nhập nội dung CV của bạn"
-        job_label = "Nhập mô tả công việc"
+        resume_label = "CV của bạn"
+        job_desc_label = "Mô tả công việc"
         analyze_btn = "Phân tích khoảng cách kỹ năng"
-        upload_cv = "Tải lên CV"
-        upload_jd = "Tải lên mô tả công việc"
     else:
         st.title("Skills Gap Analysis")
-        st.markdown("Analyze the match between your resume and job description")
+        st.markdown("Understand your fit for a desired job and how to improve your skills")
         
-        resume_label = "Enter your resume content"
-        job_label = "Enter job description"
+        resume_label = "Your Resume"
+        job_desc_label = "Job Description"
         analyze_btn = "Analyze Skills Gap"
-        upload_cv = "Upload Resume"
-        upload_jd = "Upload Job Description"
     
-    # Thêm tùy chọn tải lên CV
-    upload_resume = st.file_uploader(upload_cv, type=["pdf", "docx", "txt"], key="resume_upload")
-    resume_text = st.text_area(resume_label, height=200, key="resume_text")
+    # Nhập CV và mô tả công việc
+    resume_text = st.text_area(resume_label, height=200)
+    job_description = st.text_area(job_desc_label, height=200)
     
-    # Thêm tùy chọn tải lên mô tả công việc
-    upload_job = st.file_uploader(upload_jd, type=["pdf", "docx", "txt"], key="job_upload")
-    job_description = st.text_area(job_label, height=200, key="job_description")
-    
-    if st.button(analyze_btn, type="primary"):
-        if resume_text and job_description:
-            with st.spinner("Đang phân tích..."):
-                analysis = analyze_skills_gap(resume_text, job_description, gemini_model, language)
-                display_skills_gap_analysis(analysis, language)
-        else:
+    # Nút phân tích
+    if st.button(analyze_btn, type="primary", disabled=(not resume_text or not job_description)):
+        if not resume_text or not job_description:
             if language == "vi":
-                st.error("Vui lòng cung cấp cả CV và mô tả công việc để phân tích")
+                st.warning("Vui lòng nhập cả CV và mô tả công việc")
             else:
-                st.error("Please provide both resume and job description for analysis")
+                st.warning("Please enter both resume and job description")
+        else:
+            with st.spinner("Đang phân tích..."):
+                # Phân tích khoảng cách kỹ năng
+                analysis_result = analyze_skills_gap(resume_text, job_description, gemini_model, language)
+                
+                # Hiển thị kết quả
+                st.subheader("Kết quả phân tích" if language == "vi" else "Analysis Results")
+                
+                # Hiển thị biểu đồ trực quan
+                display_skills_gap_analysis(analysis_result, language)
+                
+                # Hiển thị phân tích chi tiết
+                st.markdown("### Phân tích chi tiết" if language == "vi" else "### Detailed Analysis")
+                st.markdown(analysis_result)
+                
+                # Nút tải xuống báo cáo
+                if language == "vi":
+                    st.download_button("📥 Tải xuống báo cáo", analysis_result, "skills_gap_analysis.txt")
+                else:
+                    st.download_button("📥 Download Report", analysis_result, "skills_gap_analysis.txt")
+    else:
+        # Hiển thị hướng dẫn khi chưa phân tích
+        if language == "vi":
+            st.info("Dán CV của bạn và mô tả công việc mong muốn để phân tích khoảng cách kỹ năng và nhận đề xuất cải thiện")
+        else:
+            st.info("Paste your resume and desired job description to analyze skills gap and receive improvement suggestions")
