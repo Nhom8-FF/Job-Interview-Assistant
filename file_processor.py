@@ -17,7 +17,19 @@ def process_file(uploaded_file):
         str: Extracted content from the file, or None if processing fails
     """
     try:
-        file_extension = uploaded_file.name.split('.')[-1].lower()
+        if uploaded_file is None:
+            return None
+            
+        if not hasattr(uploaded_file, 'name') or not uploaded_file.name:
+            st.error("File name is missing or invalid")
+            return None
+            
+        file_extension = uploaded_file.name.split('.')[-1].lower() if '.' in uploaded_file.name else ""
+        
+        # Validate file extension
+        if not file_extension:
+            st.error("Cannot determine file type. Please ensure the file has a valid extension.")
+            return None
         
         # Process based on file extension
         if file_extension in ['txt']:
