@@ -23,7 +23,7 @@ LANGUAGES = {
 # Các chuỗi văn bản đa ngôn ngữ
 TRANSLATIONS = {
     "vi": {
-        "app_title": "Trợ Lý Phỏng Vấn Việc Làm 3D",
+        "app_title": "Trợ Lý Phỏng Vấn Xin Việc",
         "interview_coach": "Huấn Luyện Viên Phỏng Vấn AI",
         "dark_mode": "Chế Độ Tối",
         "appearance": "Giao Diện",
@@ -76,7 +76,7 @@ TRANSLATIONS = {
         "powered_by": "Được hỗ trợ bởi Gemini 2.0 API | Huấn luyện viên phỏng vấn cá nhân của bạn"
     },
     "en": {
-        "app_title": "3D Job Interview Assistant",
+        "app_title": "Job Interview Assistant",
         "interview_coach": "Interview Coach AI",
         "dark_mode": "Dark Mode",
         "appearance": "Appearance",
@@ -164,6 +164,13 @@ dark_theme_css = """
     --card-bg: #313244;
     --card-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
 }
+body {
+    background-color: var(--background-color) !important;
+    color: var(--text-color) !important;
+}
+.stApp {
+    background-color: var(--background-color) !important;
+}
 .dark-theme {
     color: var(--text-color);
 }
@@ -182,6 +189,34 @@ dark_theme_css = """
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
+.dark-theme .css-1y4p8pa {
+    background-color: #1E1E2E !important;
+}
+.dark-theme .stTextInput > div > div {
+    background-color: #313244 !important;
+    color: #CDD6F4 !important;
+}
+.dark-theme .stButton > button {
+    background-color: #313244 !important;
+    color: #CDD6F4 !important;
+}
+.dark-theme .stTextArea > div > div {
+    background-color: #313244 !important;
+    color: #CDD6F4 !important;
+}
+.dark-theme .stSelectbox > div > div {
+    background-color: #313244 !important;
+    color: #CDD6F4 !important;
+}
+.css-1x8cf1d {
+    background-color: var(--background-color) !important;
+}
+.css-10oheav {
+    color: var(--text-color) !important;
+}
+.css-1aumxhk {
+    background-color: var(--background-color) !important;
+}
 </style>
 """
 
@@ -195,6 +230,13 @@ light_theme_css = """
     --accent-color: #FF6584;
     --card-bg: white;
     --card-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+body {
+    background-color: var(--background-color) !important;
+    color: var(--text-color) !important;
+}
+.stApp {
+    background-color: var(--background-color) !important;
 }
 .light-theme {
     color: var(--text-color);
@@ -474,9 +516,20 @@ with tab1:
             full_response = ""
             
             with st.spinner("Thinking..."):
+                # Add language instruction based on selected language
+                messages_copy = st.session_state.messages.copy()
+                language_instruction = "Trả lời bằng tiếng Việt." if st.session_state.language == "vi" else "Answer in English."
+                
+                # Check if first message is system message and update it
+                if messages_copy[0]["role"] == "system":
+                    messages_copy[0]["content"] += f"\n\n{language_instruction}"
+                else:
+                    # Insert system message with language instruction at the beginning
+                    messages_copy.insert(0, {"role": "system", "content": f"{SYSTEM_PROMPT}\n\n{language_instruction}"})
+                
                 assistant_response = generate_response(
                     st.session_state.gemini_model, 
-                    st.session_state.messages
+                    messages_copy
                 )
                 
                 # Simulate typing
@@ -593,8 +646,10 @@ with tab2:
             analysis_prompt = f"Based on the following document: {st.session_state.file_content}, provide {analysis_type} {language_prompt}. Be detailed and specific."
             
             with st.spinner("Analyzing document..."):
+                # Add language-specific system prompt
+                language_instruction = "Trả lời bằng tiếng Việt." if st.session_state.language == "vi" else "Answer in English."
                 messages = [
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": f"{SYSTEM_PROMPT}\n\n{language_instruction}"},
                     {"role": "user", "content": analysis_prompt}
                 ]
                 
@@ -686,8 +741,10 @@ with tab3:
             tips_prompt += f" for a {job_role} position"
             
         with st.spinner("Generating interview tips..."):
+            # Add language-specific system prompt
+            language_instruction = "Trả lời bằng tiếng Việt." if st.session_state.language == "vi" else "Answer in English."
             messages = [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": f"{SYSTEM_PROMPT}\n\n{language_instruction}"},
                 {"role": "user", "content": tips_prompt}
             ]
             
@@ -726,8 +783,10 @@ with tab3:
             questions_prompt += f" for a {job_role} position"
             
         with st.spinner("Generating practice questions..."):
+            # Add language-specific system prompt
+            language_instruction = "Trả lời bằng tiếng Việt." if st.session_state.language == "vi" else "Answer in English."
             messages = [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": f"{SYSTEM_PROMPT}\n\n{language_instruction}"},
                 {"role": "user", "content": questions_prompt}
             ]
             
@@ -746,7 +805,7 @@ with tab3:
 st.markdown("---")
 st.markdown(f"""
 <div class="{theme_class}">
-    <div style="background: linear-gradient(to right, #f7f9fc, #eef1f8); padding: 20px; border-radius: 15px; margin-top: 30px; box-shadow: 0 -5px 20px rgba(0,0,0,0.05);">
+    <div style="background: var(--card-bg); padding: 20px; border-radius: 15px; margin-top: 30px; box-shadow: var(--card-shadow);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
             <div>
                 <h3 class="gradient-text" style="margin: 0; font-size: 1.4rem; font-weight: 700;">
