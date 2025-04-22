@@ -1,10 +1,11 @@
 import streamlit as st
 import time
 import random
+import re
 from prompts import SYSTEM_PROMPT
 from gemini_helper import generate_response
 
-def create_interview_system_prompt(interview_type, job_role=None, resume=None, language="vi"):
+def create_interview_system_prompt(interview_type, job_role=None, resume=None, num_questions=5, language="vi"):
     """
     Tạo system prompt cho mô phỏng phỏng vấn
     """
@@ -21,10 +22,13 @@ Hãy tiến hành một buổi phỏng vấn thực tế và chân thực với 
 
 Quy tắc của cuộc phỏng vấn:
 1. Mỗi lần bạn chỉ hỏi một câu hỏi.
-2. Lắng nghe câu trả lời của ứng viên và đưa ra phản hồi ngắn gọn.
-3. Phản hồi nên có tính xây dựng và chuyên nghiệp.
-4. Sau khi đã hỏi ít nhất 5 câu hỏi, hãy hỏi ứng viên có muốn kết thúc không.
-5. Nếu ứng viên muốn kết thúc, hãy đưa ra đánh giá tổng thể về buổi phỏng vấn.
+2. Luôn đánh số câu hỏi rõ ràng (Câu hỏi 1, Câu hỏi 2...)
+3. Hỏi các câu hỏi liên quan trực tiếp đến vị trí công việc và kỹ năng cần thiết.
+4. Lắng nghe câu trả lời của ứng viên và đưa ra phản hồi chi tiết.
+5. Phân tích độ chính xác và chất lượng của câu trả lời sau mỗi lần ứng viên trả lời.
+6. Sẽ có tổng cộng {num_questions} câu hỏi trong buổi phỏng vấn này.
+7. Sau khi hoàn thành {num_questions} câu hỏi, hãy kết thúc buổi phỏng vấn và đưa ra đánh giá tổng thể.
+8. Đánh giá tổng thể cần có điểm số (thang điểm 1-10) và phân tích ưu điểm, nhược điểm của ứng viên.
 
 Hãy bắt đầu bằng cách giới thiệu bản thân và giải thích quy trình phỏng vấn.
 Trả lời bằng tiếng Việt.
@@ -42,10 +46,13 @@ Conduct a realistic and authentic interview with the candidate.
 
 Interview rules:
 1. Ask only one question at a time.
-2. Listen to the candidate's response and provide brief feedback.
-3. Feedback should be constructive and professional.
-4. After asking at least 5 questions, ask if the candidate wants to end the interview.
-5. If the candidate wants to end, provide an overall assessment of the interview.
+2. Always number your questions clearly (Question 1, Question 2...)
+3. Ask questions directly related to the job position and required skills.
+4. Listen to the candidate's response and provide detailed feedback.
+5. Analyze the accuracy and quality of each response after the candidate answers.
+6. There will be a total of {num_questions} questions in this interview.
+7. After completing {num_questions} questions, conclude the interview and provide an overall assessment.
+8. The overall assessment should include a score (on a scale of 1-10) and analyze the candidate's strengths and weaknesses.
 
 Start by introducing yourself and explaining the interview process.
 Answer in English.
@@ -67,21 +74,50 @@ Answer in English.
     
     return system_prompt
 
-def start_interview_session(interview_type, job_role=None, resume=None, gemini_model=None, language="vi"):
+def count_questions(messages):
+    """
+    Đếm số câu hỏi đã được hỏi trong buổi phỏng vấn
+    """
+    question_count = 0
+    for msg in messages:
+        if msg["role"] == "assistant":
+            # Tìm các dòng bắt đầu bằng "Câu hỏi X" hoặc "Question X"
+            if re.search(r"(Câu hỏi|Question)\s+\d+", msg["content"]):
+                question_count += 1
+    return question_count
+
+def check_interview_complete(messages, total_questions):
+    """
+    Kiểm tra xem buổi phỏng vấn đã hoàn thành chưa
+    """
+    question_count = count_questions(messages)
+    last_message = messages[-1]["content"] if messages else ""
+    
+    # Kiểm tra xem có phải đánh giá cuối cùng không
+    contains_score = re.search(r"(\d+)/10|(\d+)\s*/\s*10", last_message)
+    contains_final_assessment = re.search(r"(đánh giá tổng thể|overall assessment|final score|điểm số cuối cùng)", 
+                                         last_message.lower())
+    
+    return question_count >= total_questions or (contains_score and contains_final_assessment)
+
+def start_interview_session(interview_type, job_role=None, resume=None, num_questions=5, gemini_model=None, language="vi"):
     """
     Bắt đầu phiên phỏng vấn
     """
     # Khởi tạo lịch sử tin nhắn nếu chưa có
     if "interview_messages" not in st.session_state:
-        system_prompt = create_interview_system_prompt(interview_type, job_role, resume, language)
+        system_prompt = create_interview_system_prompt(interview_type, job_role, resume, num_questions, language)
+        
+        # Lưu số lượng câu hỏi
+        st.session_state.total_interview_questions = num_questions
         
         # Tạo prompt bắt đầu phỏng vấn
         if language == "vi":
-            start_prompt = f"Tôi muốn bắt đầu buổi phỏng vấn {interview_type}"
+            start_prompt = f"Tôi muốn bắt đầu buổi phỏng vấn {interview_type} với {num_questions} câu hỏi"
             if job_role:
                 start_prompt += f" cho vị trí {job_role}"
         else:
-            start_prompt = f"I want to start a {interview_type} interview"
+            start_prompt = f"I want to start a {interview_type} interview with {num_questions} questions"
             if job_role:
                 start_prompt += f" for the {job_role} position"
         
@@ -108,10 +144,11 @@ def interview_simulator_page(gemini_model):
         interview_type_label = "Chọn loại phỏng vấn"
         job_role_label = "Nhập vị trí công việc (tùy chọn)"
         resume_label = "Dán CV của bạn (tùy chọn)"
+        questions_label = "Số lượng câu hỏi"
         start_btn = "Bắt đầu phỏng vấn mới"
         your_answer = "Câu trả lời của bạn"
-        send_btn = "Gửi câu trả lời"
-        reset_btn = "Kết thúc và bắt đầu lại"
+        end_btn = "Kết thúc phỏng vấn"
+        reset_btn = "Bắt đầu lại"
         
         interview_options = {
             "technical": "Phỏng vấn kỹ thuật",
@@ -119,6 +156,10 @@ def interview_simulator_page(gemini_model):
             "hr": "Phỏng vấn HR",
             "case": "Phỏng vấn tình huống"
         }
+        
+        progress_msg = "Tiến độ phỏng vấn"
+        feedback_btn = "Xem đánh giá chi tiết"
+        end_interview_msg = "Phỏng vấn đã kết thúc. Bạn có thể xem đánh giá chi tiết hoặc bắt đầu lại."
     else:
         st.title("Interview Simulator")
         st.markdown("Practice interviewing with AI - respond to questions as you would in a real interview")
@@ -126,10 +167,11 @@ def interview_simulator_page(gemini_model):
         interview_type_label = "Select interview type"
         job_role_label = "Enter job position (optional)"
         resume_label = "Paste your resume (optional)"
+        questions_label = "Number of questions"
         start_btn = "Start new interview"
         your_answer = "Your answer"
-        send_btn = "Send response"
-        reset_btn = "End and restart"
+        end_btn = "End interview"
+        reset_btn = "Restart"
         
         interview_options = {
             "technical": "Technical Interview",
@@ -137,6 +179,10 @@ def interview_simulator_page(gemini_model):
             "hr": "HR Interview",
             "case": "Case Interview"
         }
+        
+        progress_msg = "Interview progress"
+        feedback_btn = "View detailed feedback"
+        end_interview_msg = "The interview has ended. You can view detailed feedback or start over."
     
     # Sidebar cho cài đặt phỏng vấn
     with st.sidebar:
@@ -151,19 +197,47 @@ def interview_simulator_page(gemini_model):
         job_role = st.text_input(job_role_label, key="interview_job_role")
         resume = st.text_area(resume_label, height=150, key="interview_resume")
         
+        # Thêm lựa chọn số lượng câu hỏi
+        num_questions = st.slider(
+            questions_label, 
+            min_value=3, 
+            max_value=10, 
+            value=5,
+            step=1,
+            key="num_interview_questions"
+        )
+        
         if st.button(start_btn, type="primary"):
             # Reset session state
             if "interview_messages" in st.session_state:
                 del st.session_state.interview_messages
+            if "interview_feedback" in st.session_state:
+                del st.session_state.interview_feedback
+            if "interview_completed" in st.session_state:
+                del st.session_state.interview_completed
             
             # Bắt đầu phiên phỏng vấn mới
-            start_interview_session(interview_type, job_role, resume, gemini_model, language)
+            start_interview_session(interview_type, job_role, resume, num_questions, gemini_model, language)
             st.rerun()
     
-    # Hiển thị lịch sử tin nhắn
+    # Hiển thị lịch sử tin nhắn và phần tương tác
     if "interview_messages" in st.session_state:
         messages = st.session_state.interview_messages
+        total_questions = st.session_state.total_interview_questions
         
+        # Hiển thị thanh tiến độ phỏng vấn
+        current_questions = count_questions(messages)
+        interview_complete = check_interview_complete(messages, total_questions)
+        
+        if interview_complete and "interview_completed" not in st.session_state:
+            st.session_state.interview_completed = True
+        
+        # Hiển thị thanh tiến độ
+        st.write(f"**{progress_msg}:** {current_questions}/{total_questions}")
+        progress_percent = min(current_questions / total_questions, 1.0)
+        st.progress(progress_percent)
+        
+        # Hiển thị tin nhắn
         for message in messages:
             if message["role"] == "system":
                 continue  # Không hiển thị system prompt
@@ -173,34 +247,70 @@ def interview_simulator_page(gemini_model):
             else:
                 st.chat_message("user", avatar="👤").write(message["content"])
         
-        # Thêm phần nhập câu trả lời
-        user_response = st.chat_input(your_answer)
-        
-        if user_response:
-            # Hiển thị câu trả lời của người dùng
-            st.chat_message("user", avatar="👤").write(user_response)
+        # Nếu phỏng vấn đã kết thúc, hiển thị nút để xem đánh giá chi tiết
+        if "interview_completed" in st.session_state:
+            st.info(end_interview_msg)
             
-            # Thêm vào lịch sử tin nhắn
-            st.session_state.interview_messages.append({"role": "user", "content": user_response})
+            if "interview_feedback" not in st.session_state:
+                if st.button(feedback_btn, type="primary"):
+                    with st.spinner("Đang tạo phản hồi chi tiết..."):
+                        feedback = get_feedback_on_interview(messages, gemini_model, language)
+                        st.session_state.interview_feedback = feedback
+                    st.rerun()
+            else:
+                # Hiển thị phản hồi chi tiết
+                st.subheader("📊 Đánh giá chi tiết")
+                st.markdown(st.session_state.interview_feedback)
+        else:
+            # Nếu phỏng vấn chưa kết thúc, cho phép người dùng tiếp tục trả lời
+            user_response = st.chat_input(your_answer)
             
-            # Lấy phản hồi từ người phỏng vấn
-            with st.spinner("Người phỏng vấn đang suy nghĩ..."):
-                interviewer_response = generate_response(gemini_model, st.session_state.interview_messages)
-                st.session_state.interview_messages.append({"role": "assistant", "content": interviewer_response})
+            if user_response:
+                # Hiển thị câu trả lời của người dùng
+                st.chat_message("user", avatar="👤").write(user_response)
+                
+                # Thêm vào lịch sử tin nhắn
+                st.session_state.interview_messages.append({"role": "user", "content": user_response})
+                
+                # Lấy phản hồi từ người phỏng vấn
+                with st.spinner("Người phỏng vấn đang suy nghĩ..."):
+                    interviewer_response = generate_response(gemini_model, st.session_state.interview_messages)
+                    st.session_state.interview_messages.append({"role": "assistant", "content": interviewer_response})
+                
+                # Kiểm tra xem phỏng vấn đã kết thúc chưa sau khi nhận được phản hồi mới
+                if check_interview_complete(st.session_state.interview_messages, total_questions):
+                    st.session_state.interview_completed = True
+                
+                st.rerun()
             
-            # Hiển thị phản hồi của người phỏng vấn
-            st.chat_message("assistant", avatar="👨‍💼").write(interviewer_response)
+            # Tùy chọn kết thúc sớm phỏng vấn
+            if st.button(end_btn):
+                # Thông báo cho AI kết thúc phỏng vấn
+                end_message = "Tôi muốn kết thúc phỏng vấn và nhận đánh giá tổng thể." if language == "vi" else "I want to end the interview and get an overall assessment."
+                st.session_state.interview_messages.append({"role": "user", "content": end_message})
+                
+                with st.spinner("Đang chuẩn bị đánh giá tổng thể..."):
+                    final_assessment = generate_response(gemini_model, st.session_state.interview_messages)
+                    st.session_state.interview_messages.append({"role": "assistant", "content": final_assessment})
+                    st.session_state.interview_completed = True
+                
+                st.rerun()
     else:
         # Hướng dẫn khi chưa bắt đầu phỏng vấn
         if language == "vi":
-            st.info("👈 Chọn loại phỏng vấn và nhấn 'Bắt đầu phỏng vấn mới' để bắt đầu.")
+            st.info("👈 Chọn loại phỏng vấn, số lượng câu hỏi và nhấn 'Bắt đầu phỏng vấn mới' để bắt đầu.")
         else:
-            st.info("👈 Select an interview type and click 'Start new interview' to begin.")
+            st.info("👈 Select an interview type, number of questions and click 'Start new interview' to begin.")
     
     # Nút reset
     if "interview_messages" in st.session_state:
         if st.button(reset_btn):
-            del st.session_state.interview_messages
+            if "interview_messages" in st.session_state:
+                del st.session_state.interview_messages
+            if "interview_feedback" in st.session_state:
+                del st.session_state.interview_feedback
+            if "interview_completed" in st.session_state:
+                del st.session_state.interview_completed
             st.rerun()
 
 def get_feedback_on_interview(messages, gemini_model, language="vi"):
