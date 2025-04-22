@@ -685,121 +685,146 @@ with tab2:
         """, unsafe_allow_html=True)
 
 with tab3:
-    st.markdown(f"""
-    <div class="{theme_class}">
-        <h2 class="gradient-text" style="font-weight: 700; font-size: 1.8rem; margin-bottom: 20px;">
-            {get_text("tips_practice")}
-        </h2>
-        <p style="font-size: 0.95rem; opacity: 0.7; margin-bottom: 20px; max-width: 650px;">
-            {get_text("tips_desc_2")}
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    interview_options = {
-        "vi": ["Phỏng Vấn Kỹ Thuật", "Phỏng Vấn Hành Vi", "Phỏng Vấn HR", "Phỏng Vấn Tình Huống"],
-        "en": ["Technical Interview", "Behavioral Interview", "HR Interview", "Case Interview"]
-    }
-    
-    interview_type = st.selectbox(
-        get_text("select_interview"),
-        interview_options[st.session_state.language]
-    )
-    
-    job_role = st.text_input(get_text("job_role"))
-    
-    # Custom button styling for 3D effect
-    st.markdown("""
-    <style>
-        .stButton button {
-            border-radius: 10px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            text-transform: none;
-        }
-        .stButton button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 15px rgba(108, 99, 255, 0.2);
-        }
-        .primary-btn {
-            background-color: #6C63FF !important;
-            color: white !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    col1, col2 = st.columns([3, 1])
-    with col2:
-        get_tips = st.button(f"💡 {get_text('get_tips')}", use_container_width=True)
-    
-    if get_tips:
-        # Set language for prompt
-        language_prompt = "in Vietnamese" if st.session_state.language == "vi" else "in English"
-        tips_prompt = f"Provide comprehensive tips for a {interview_type} {language_prompt}"
-        if job_role:
-            tips_prompt += f" for a {job_role} position"
-            
-        with st.spinner("Generating interview tips..."):
-            # Add language-specific system prompt
-            language_instruction = "Trả lời bằng tiếng Việt." if st.session_state.language == "vi" else "Answer in English."
-            messages = [
-                {"role": "system", "content": f"{SYSTEM_PROMPT}\n\n{language_instruction}"},
-                {"role": "user", "content": tips_prompt}
-            ]
-            
-            tips_response = generate_response(st.session_state.gemini_model, messages)
-            
-            st.markdown(f"""
-            <div class="{theme_class}">
-                <div style="background: var(--card-bg); padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: var(--card-shadow);">
-                    <h3 style="color: var(--primary-color); margin-bottom: 15px; font-weight: 700;">{get_text("get_tips")}</h3>
-                    <div style="line-height: 1.6;">
-            """, unsafe_allow_html=True)
-            st.markdown(tips_response)
-            st.markdown("</div></div></div>", unsafe_allow_html=True)
-    
-    st.markdown(f"""
-    <div class="{theme_class}">
-        <h3 style='margin: 30px 0 15px 0; font-size: 1.4rem;'>{get_text("practice_questions")}</h3>
+    # Tạo subtabs cho Tips và Interview Simulator
+    if st.session_state.language == "vi":
+        tips_tab_label = "💡 Lời khuyên phỏng vấn"
+        simulator_tab_label = "🎯 Mô phỏng phỏng vấn"
+        skills_gap_tab_label = "📊 Phân tích khoảng cách kỹ năng"
+    else:
+        tips_tab_label = "💡 Interview Tips"
+        simulator_tab_label = "🎯 Interview Simulator"
+        skills_gap_tab_label = "📊 Skills Gap Analysis"
         
-        <div style="background: rgba(108, 99, 255, 0.05); padding: 10px 15px; border-radius: 8px; margin-bottom: 15px;">
-            <p style="margin: 0; font-size: 0.9rem;">
-                <strong>💡 Tip:</strong> {get_text("practice_tip")}
+    subtabs = st.tabs([tips_tab_label, simulator_tab_label, skills_gap_tab_label])
+    
+    # Tab lời khuyên phỏng vấn
+    with subtabs[0]:
+        st.markdown(f"""
+        <div class="{theme_class}">
+            <h2 class="gradient-text" style="font-weight: 700; font-size: 1.8rem; margin-bottom: 20px;">
+                {get_text("tips_practice")}
+            </h2>
+            <p style="font-size: 0.95rem; opacity: 0.7; margin-bottom: 20px; max-width: 650px;">
+                {get_text("tips_desc_2")}
             </p>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+        
+        interview_options = {
+            "vi": ["Phỏng Vấn Kỹ Thuật", "Phỏng Vấn Hành Vi", "Phỏng Vấn HR", "Phỏng Vấn Tình Huống"],
+            "en": ["Technical Interview", "Behavioral Interview", "HR Interview", "Case Interview"]
+        }
+        
+        interview_type = st.selectbox(
+            get_text("select_interview"),
+            interview_options[st.session_state.language],
+            key="tips_interview_type"
+        )
+        
+        job_role = st.text_input(get_text("job_role"), key="tips_job_role")
+        
+        # Custom button styling for 3D effect
+        st.markdown("""
+        <style>
+            .stButton button {
+                border-radius: 10px;
+                font-weight: 600;
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+                text-transform: none;
+            }
+            .stButton button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 15px rgba(108, 99, 255, 0.2);
+            }
+            .primary-btn {
+                background-color: #6C63FF !important;
+                color: white !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        col1, col2 = st.columns([3, 1])
+        with col2:
+            get_tips = st.button(f"💡 {get_text('get_tips')}", use_container_width=True)
+        
+        if get_tips:
+            # Set language for prompt
+            language_prompt = "in Vietnamese" if st.session_state.language == "vi" else "in English"
+            tips_prompt = f"Provide comprehensive tips for a {interview_type} {language_prompt}"
+            if job_role:
+                tips_prompt += f" for a {job_role} position"
+                
+            with st.spinner("Generating interview tips..."):
+                # Add language-specific system prompt
+                language_instruction = "Trả lời bằng tiếng Việt." if st.session_state.language == "vi" else "Answer in English."
+                messages = [
+                    {"role": "system", "content": f"{SYSTEM_PROMPT}\n\n{language_instruction}"},
+                    {"role": "user", "content": tips_prompt}
+                ]
+                
+                tips_response = generate_response(st.session_state.gemini_model, messages)
+                
+                st.markdown(f"""
+                <div class="{theme_class}">
+                    <div style="background: var(--card-bg); padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: var(--card-shadow);">
+                        <h3 style="color: var(--primary-color); margin-bottom: 15px; font-weight: 700;">{get_text("get_tips")}</h3>
+                        <div style="line-height: 1.6;">
+                """, unsafe_allow_html=True)
+                st.markdown(tips_response)
+                st.markdown("</div></div></div>", unsafe_allow_html=True)
+        
+        st.markdown(f"""
+        <div class="{theme_class}">
+            <h3 style='margin: 30px 0 15px 0; font-size: 1.4rem;'>{get_text("practice_questions")}</h3>
+            
+            <div style="background: rgba(108, 99, 255, 0.05); padding: 10px 15px; border-radius: 8px; margin-bottom: 15px;">
+                <p style="margin: 0; font-size: 0.9rem;">
+                    <strong>💡 Tip:</strong> {get_text("practice_tip")}
+                </p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2 = st.columns([3, 1])
+        with col2:
+            get_questions = st.button(f"🎯 {get_text('generate_questions')}", use_container_width=True)
+        
+        if get_questions:
+            # Set language for prompt
+            language_prompt = "in Vietnamese" if st.session_state.language == "vi" else "in English"
+            questions_prompt = f"Generate 5 common {interview_type} questions {language_prompt}"
+            if job_role:
+                questions_prompt += f" for a {job_role} position"
+                
+            with st.spinner("Generating practice questions..."):
+                # Add language-specific system prompt
+                language_instruction = "Trả lời bằng tiếng Việt." if st.session_state.language == "vi" else "Answer in English."
+                messages = [
+                    {"role": "system", "content": f"{SYSTEM_PROMPT}\n\n{language_instruction}"},
+                    {"role": "user", "content": questions_prompt}
+                ]
+                
+                questions_response = generate_response(st.session_state.gemini_model, messages)
+                
+                st.markdown(f"""
+                <div class="{theme_class}">
+                    <div style="background: var(--card-bg); padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: var(--card-shadow);">
+                        <h3 style="color: var(--primary-color); margin-bottom: 15px; font-weight: 700;">{get_text("practice_questions")}</h3>
+                        <div style="line-height: 1.6;">
+                """, unsafe_allow_html=True)
+                st.markdown(questions_response)
+                st.markdown("</div></div></div>", unsafe_allow_html=True)
     
-    col1, col2 = st.columns([3, 1])
-    with col2:
-        get_questions = st.button(f"🎯 {get_text('generate_questions')}", use_container_width=True)
+    # Tab mô phỏng phỏng vấn
+    with subtabs[1]:
+        from interview_simulator import interview_simulator_page
+        interview_simulator_page(st.session_state.gemini_model)
     
-    if get_questions:
-        # Set language for prompt
-        language_prompt = "in Vietnamese" if st.session_state.language == "vi" else "in English"
-        questions_prompt = f"Generate 5 common {interview_type} questions {language_prompt}"
-        if job_role:
-            questions_prompt += f" for a {job_role} position"
-            
-        with st.spinner("Generating practice questions..."):
-            # Add language-specific system prompt
-            language_instruction = "Trả lời bằng tiếng Việt." if st.session_state.language == "vi" else "Answer in English."
-            messages = [
-                {"role": "system", "content": f"{SYSTEM_PROMPT}\n\n{language_instruction}"},
-                {"role": "user", "content": questions_prompt}
-            ]
-            
-            questions_response = generate_response(st.session_state.gemini_model, messages)
-            
-            st.markdown(f"""
-            <div class="{theme_class}">
-                <div style="background: var(--card-bg); padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: var(--card-shadow);">
-                    <h3 style="color: var(--primary-color); margin-bottom: 15px; font-weight: 700;">{get_text("practice_questions")}</h3>
-                    <div style="line-height: 1.6;">
-            """, unsafe_allow_html=True)
-            st.markdown(questions_response)
-            st.markdown("</div></div></div>", unsafe_allow_html=True)
+    # Tab phân tích khoảng cách kỹ năng
+    with subtabs[2]:
+        from skills_gap_analyzer import skills_gap_analysis_page
+        skills_gap_analysis_page(st.session_state.gemini_model)
 
 # Enhanced 3D footer
 st.markdown("---")
