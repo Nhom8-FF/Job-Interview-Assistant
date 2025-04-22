@@ -500,71 +500,97 @@ with tab2:
     """, unsafe_allow_html=True)
     
     if st.session_state.file_content:
-        st.markdown("""
-        <div style="background-color: #E8F5E9; padding: 10px 15px; border-radius: 10px; margin-bottom: 20px;">
-            <p style="margin: 0; display: flex; align-items: center;">
-                <span style="background-color: #4CAF50; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; justify-content: center; align-items: center; margin-right: 10px; color: white;">✓</span>
-                <span style="font-weight: 500;">Document loaded successfully!</span>
-            </p>
+        st.markdown(f"""
+        <div class="{theme_class}">
+            <div style="background-color: #E8F5E9; padding: 10px 15px; border-radius: 10px; margin-bottom: 20px;">
+                <p style="margin: 0; display: flex; align-items: center;">
+                    <span style="background-color: #4CAF50; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; justify-content: center; align-items: center; margin-right: 10px; color: white;">✓</span>
+                    <span style="font-weight: 500;">{get_text("doc_loaded")}</span>
+                </p>
+            </div>
         </div>
         """, unsafe_allow_html=True)
         
         # Display the processed content in a modern card
-        with st.expander("📄 View Document Content", expanded=True):
-            st.markdown("""
-            <div style="background: white; padding: 15px; border-radius: 10px; border-left: 4px solid #6C63FF; max-height: 300px; overflow-y: auto; font-size: 0.9rem; line-height: 1.5;">
+        with st.expander(f"📄 {get_text('view_content')}", expanded=True):
+            st.markdown(f"""
+            <div class="{theme_class}">
+                <div style="background: var(--card-bg); padding: 15px; border-radius: 10px; border-left: 4px solid #6C63FF; max-height: 300px; overflow-y: auto; font-size: 0.9rem; line-height: 1.5;">
+                </div>
+            </div>
             """, unsafe_allow_html=True)
             st.markdown(f"```\n{st.session_state.file_content}\n```")
-            st.markdown("</div>", unsafe_allow_html=True)
         
         # Document analysis section with enhanced UI
-        st.markdown("""
-        <div style="margin: 25px 0 15px 0;">
-            <h3 style="font-weight: 600; font-size: 1.4rem; color: #1E2A3A;">
-                💡 Get AI-Powered Insights
-            </h3>
-            <p style="font-size: 0.9rem; opacity: 0.7; margin-bottom: 15px;">
-                Select analysis type and generate personalized insights based on your document
-            </p>
+        st.markdown(f"""
+        <div class="{theme_class}">
+            <div style="margin: 25px 0 15px 0;">
+                <h3 style="font-weight: 600; font-size: 1.4rem;">
+                    💡 {get_text("get_insights")}
+                </h3>
+                <p style="font-size: 0.9rem; opacity: 0.7; margin-bottom: 15px;">
+                    {get_text("insights_desc")}
+                </p>
+            </div>
         </div>
         """, unsafe_allow_html=True)
         
         # Create a card for analysis options
-        st.markdown("""
-        <div style="background: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);">
+        st.markdown(f"""
+        <div class="{theme_class}">
+            <div style="background: var(--card-bg); padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: var(--card-shadow);">
+            </div>
+        </div>
         """, unsafe_allow_html=True)
         
-        analysis_options = [
-            ("Resume Improvements", "✏️", "Get suggestions to enhance your resume's impact"),
-            ("Job Description Keywords", "🔍", "Extract key skills and requirements from job postings"),
-            ("Skills Gap Analysis", "📊", "Compare your skills with job requirements"),
-            ("Custom Analysis", "🧩", "Specify your own analysis criteria")
-        ]
+        analysis_options = {
+            "vi": [
+                (get_text("resume_improvements"), "✏️", "Nhận gợi ý cải thiện CV của bạn hiệu quả hơn"),
+                (get_text("job_keywords"), "🔍", "Trích xuất các kỹ năng và yêu cầu chính từ mô tả công việc"),
+                (get_text("skills_gap"), "📊", "So sánh kỹ năng của bạn với yêu cầu công việc"),
+                (get_text("custom_analysis"), "🧩", "Chỉ định tiêu chí phân tích riêng của bạn")
+            ],
+            "en": [
+                (get_text("resume_improvements"), "✏️", "Get suggestions to enhance your resume's impact"),
+                (get_text("job_keywords"), "🔍", "Extract key skills and requirements from job postings"),
+                (get_text("skills_gap"), "📊", "Compare your skills with job requirements"),
+                (get_text("custom_analysis"), "🧩", "Specify your own analysis criteria")
+            ]
+        }
         
         analysis_cols = st.columns(4)
-        for i, (option, icon, desc) in enumerate(analysis_options):
+        for i, (option, icon, desc) in enumerate(analysis_options[st.session_state.language]):
             with analysis_cols[i]:
                 st.markdown(f"""
-                <div style="text-align: center; cursor: pointer; padding: 10px 5px;">
-                    <div style="font-size: 2rem; margin-bottom: 8px;">{icon}</div>
-                    <div style="font-weight: 500; font-size: 0.9rem; margin-bottom: 5px;">{option}</div>
-                    <div style="font-size: 0.75rem; opacity: 0.7; line-height: 1.2;">{desc}</div>
+                <div class="{theme_class}">
+                    <div style="text-align: center; cursor: pointer; padding: 10px 5px;">
+                        <div style="font-size: 2rem; margin-bottom: 8px;">{icon}</div>
+                        <div style="font-weight: 500; font-size: 0.9rem; margin-bottom: 5px;">{option}</div>
+                        <div style="font-size: 0.75rem; opacity: 0.7; line-height: 1.2;">{desc}</div>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
         
-        st.markdown("</div>", unsafe_allow_html=True)
+        analysis_choices = [
+            get_text("resume_improvements"), 
+            get_text("job_keywords"), 
+            get_text("skills_gap"), 
+            get_text("custom_analysis")
+        ]
         
         analysis_type = st.selectbox(
-            "Select analysis type",
-            ["Resume Improvements", "Job Description Keywords", "Skills Gap Analysis", "Custom Analysis"]
+            get_text("select_analysis"),
+            analysis_choices
         )
         
         col1, col2 = st.columns([3, 1])
         with col2:
-            generate_analysis = st.button("🔍 Analyze Document", use_container_width=True)
+            generate_analysis = st.button(f"🔍 {get_text('analyze_document')}", use_container_width=True)
         
         if generate_analysis:
-            analysis_prompt = f"Based on the following document: {st.session_state.file_content}, provide {analysis_type}."
+            # Set language for prompt
+            language_prompt = "in Vietnamese" if st.session_state.language == "vi" else "in English"
+            analysis_prompt = f"Based on the following document: {st.session_state.file_content}, provide {analysis_type} {language_prompt}. Be detailed and specific."
             
             with st.spinner("Analyzing document..."):
                 messages = [
@@ -574,26 +600,31 @@ with tab2:
                 
                 analysis_response = generate_response(st.session_state.gemini_model, messages)
                 
-                st.markdown("""
-                <div style="background: white; padding: 25px; border-radius: 15px; margin-top: 25px; box-shadow: 0 8px 25px rgba(0,0,0,0.08);">
-                    <h3 style="color: #6C63FF; margin-bottom: 20px; font-weight: 700; font-size: 1.3rem;">Analysis Results</h3>
-                    <div style="line-height: 1.6;">
+                st.markdown(f"""
+                <div class="{theme_class}">
+                    <div style="background: var(--card-bg); padding: 25px; border-radius: 15px; margin-top: 25px; box-shadow: var(--card-shadow);">
+                        <h3 style="color: var(--primary-color); margin-bottom: 20px; font-weight: 700; font-size: 1.3rem;">
+                            {get_text("analyze_document")} - {analysis_type}
+                        </h3>
+                        <div style="line-height: 1.6;">
                 """, unsafe_allow_html=True)
                 st.markdown(analysis_response)
-                st.markdown("</div></div>", unsafe_allow_html=True)
+                st.markdown("</div></div></div>", unsafe_allow_html=True)
     else:
         # Empty state with 3D-style illustration
-        st.markdown("""
-        <div style="background: white; padding: 30px; border-radius: 15px; text-align: center; margin: 20px 0; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
-            <img src="https://images.unsplash.com/photo-1586281380349-632531db7ed4" style="width: 250px; border-radius: 15px; margin-bottom: 20px;" alt="Upload a document">
-            <h3 style="margin-bottom: 10px; font-weight: 600; color: #1E2A3A;">No Document Uploaded Yet</h3>
-            <p style="opacity: 0.7; max-width: 450px; margin: 0 auto 15px auto; line-height: 1.5;">
-                Upload a resume, job description, or any relevant document using the sidebar to get personalized analysis and insights
-            </p>
-            <div style="background: rgba(108, 99, 255, 0.1); padding: 10px 15px; border-radius: 8px; display: inline-block; margin-top: 10px;">
-                <p style="margin: 0; font-size: 0.85rem; text-align: left;">
-                    <strong>💡 Tip:</strong> Try uploading different document types including text, PDF, DOCX, or even images
+        st.markdown(f"""
+        <div class="{theme_class}">
+            <div style="background: var(--card-bg); padding: 30px; border-radius: 15px; text-align: center; margin: 20px 0; box-shadow: var(--card-shadow);">
+                <img src="https://images.unsplash.com/photo-1586281380349-632531db7ed4" style="width: 250px; border-radius: 15px; margin-bottom: 20px;" alt="Upload a document">
+                <h3 style="margin-bottom: 10px; font-weight: 600;">{get_text("no_document")}</h3>
+                <p style="opacity: 0.7; max-width: 450px; margin: 0 auto 15px auto; line-height: 1.5;">
+                    {get_text("no_doc_text")}
                 </p>
+                <div style="background: rgba(108, 99, 255, 0.1); padding: 10px 15px; border-radius: 8px; display: inline-block; margin-top: 10px;">
+                    <p style="margin: 0; font-size: 0.85rem; text-align: left;">
+                        <strong>💡 Tip:</strong> {get_text("upload_tip_2")}
+                    </p>
+                </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -648,7 +679,9 @@ with tab3:
         get_tips = st.button(f"💡 {get_text('get_tips')}", use_container_width=True)
     
     if get_tips:
-        tips_prompt = f"Provide comprehensive tips for a {interview_type}"
+        # Set language for prompt
+        language_prompt = "in Vietnamese" if st.session_state.language == "vi" else "in English"
+        tips_prompt = f"Provide comprehensive tips for a {interview_type} {language_prompt}"
         if job_role:
             tips_prompt += f" for a {job_role} position"
             
@@ -660,21 +693,24 @@ with tab3:
             
             tips_response = generate_response(st.session_state.gemini_model, messages)
             
-            st.markdown("""
-            <div style="background: white; padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.08);">
-                <h3 style="color: #6C63FF; margin-bottom: 15px; font-weight: 700;">Interview Tips</h3>
-                <div style="line-height: 1.6;">
+            st.markdown(f"""
+            <div class="{theme_class}">
+                <div style="background: var(--card-bg); padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: var(--card-shadow);">
+                    <h3 style="color: var(--primary-color); margin-bottom: 15px; font-weight: 700;">{get_text("get_tips")}</h3>
+                    <div style="line-height: 1.6;">
             """, unsafe_allow_html=True)
             st.markdown(tips_response)
-            st.markdown("</div></div>", unsafe_allow_html=True)
+            st.markdown("</div></div></div>", unsafe_allow_html=True)
     
-    st.markdown("<h3 style='margin: 30px 0 15px 0; font-size: 1.4rem;'>Practice Questions</h3>", unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div style="background: rgba(108, 99, 255, 0.05); padding: 10px 15px; border-radius: 8px; margin-bottom: 15px;">
-        <p style="margin: 0; font-size: 0.9rem;">
-            <strong>💡 Tip:</strong> Practice with real interview questions for your specific role and interview type.
-        </p>
+    st.markdown(f"""
+    <div class="{theme_class}">
+        <h3 style='margin: 30px 0 15px 0; font-size: 1.4rem;'>{get_text("practice_questions")}</h3>
+        
+        <div style="background: rgba(108, 99, 255, 0.05); padding: 10px 15px; border-radius: 8px; margin-bottom: 15px;">
+            <p style="margin: 0; font-size: 0.9rem;">
+                <strong>💡 Tip:</strong> {get_text("practice_tip")}
+            </p>
+        </div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -683,7 +719,9 @@ with tab3:
         get_questions = st.button(f"🎯 {get_text('generate_questions')}", use_container_width=True)
     
     if get_questions:
-        questions_prompt = f"Generate 5 common {interview_type} questions"
+        # Set language for prompt
+        language_prompt = "in Vietnamese" if st.session_state.language == "vi" else "in English"
+        questions_prompt = f"Generate 5 common {interview_type} questions {language_prompt}"
         if job_role:
             questions_prompt += f" for a {job_role} position"
             
@@ -695,32 +733,35 @@ with tab3:
             
             questions_response = generate_response(st.session_state.gemini_model, messages)
             
-            st.markdown("""
-            <div style="background: white; padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.08);">
-                <h3 style="color: #6C63FF; margin-bottom: 15px; font-weight: 700;">Practice Questions</h3>
-                <div style="line-height: 1.6;">
+            st.markdown(f"""
+            <div class="{theme_class}">
+                <div style="background: var(--card-bg); padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: var(--card-shadow);">
+                    <h3 style="color: var(--primary-color); margin-bottom: 15px; font-weight: 700;">{get_text("practice_questions")}</h3>
+                    <div style="line-height: 1.6;">
             """, unsafe_allow_html=True)
             st.markdown(questions_response)
-            st.markdown("</div></div>", unsafe_allow_html=True)
+            st.markdown("</div></div></div>", unsafe_allow_html=True)
 
 # Enhanced 3D footer
 st.markdown("---")
-st.markdown("""
-<div style="background: linear-gradient(to right, #f7f9fc, #eef1f8); padding: 20px; border-radius: 15px; margin-top: 30px; box-shadow: 0 -5px 20px rgba(0,0,0,0.05);">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-        <div>
-            <h3 style="margin: 0; background: linear-gradient(90deg, #6C63FF, #FF6584); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 1.4rem; font-weight: 700;">
-                3D Job Interview Assistant
-            </h3>
-            <p style="margin: 8px 0 0 0; font-size: 0.9rem; opacity: 0.7;">
-                Powered by Gemini 2.0 API | Your personal interview coach
-            </p>
-        </div>
-        <div>
-            <div style="background: rgba(108, 99, 255, 0.1); padding: 10px 15px; border-radius: 8px; display: inline-block;">
-                <p style="margin: 0; font-size: 0.85rem;">
-                    <strong>💡 Pro Tip:</strong> Upload your resume for personalized interview preparation
+st.markdown(f"""
+<div class="{theme_class}">
+    <div style="background: linear-gradient(to right, #f7f9fc, #eef1f8); padding: 20px; border-radius: 15px; margin-top: 30px; box-shadow: 0 -5px 20px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div>
+                <h3 class="gradient-text" style="margin: 0; font-size: 1.4rem; font-weight: 700;">
+                    {get_text("app_title")}
+                </h3>
+                <p style="margin: 8px 0 0 0; font-size: 0.9rem; opacity: 0.7;">
+                    {get_text("powered_by")}
                 </p>
+            </div>
+            <div>
+                <div style="background: rgba(108, 99, 255, 0.1); padding: 10px 15px; border-radius: 8px; display: inline-block;">
+                    <p style="margin: 0; font-size: 0.85rem;">
+                        <strong>💡 Pro Tip:</strong> {get_text("footer_tip")}
+                    </p>
+                </div>
             </div>
         </div>
     </div>
