@@ -73,7 +73,7 @@ TRANSLATIONS = {
         "practice_tip": "Luyện tập với câu hỏi phỏng vấn thực tế cho loại phỏng vấn và vai trò cụ thể của bạn.",
         "generate_questions": "Tạo Câu Hỏi",
         "footer_tip": "Tải lên CV của bạn để được chuẩn bị phỏng vấn cá nhân hoá",
-        "powered_by": "Được hỗ trợ bởi Gemini 2.0 API | Huấn luyện viên phỏng vấn cá nhân của bạn"
+        "powered_by": "Huấn luyện viên phỏng vấn cá nhân của bạn"
     },
     "en": {
         "app_title": "Job Interview Assistant",
@@ -126,7 +126,7 @@ TRANSLATIONS = {
         "practice_tip": "Practice with real interview questions for your specific role and interview type.",
         "generate_questions": "Generate Questions",
         "footer_tip": "Upload your resume for personalized interview preparation",
-        "powered_by": "Powered by Gemini 2.0 API | Your personal interview coach"
+        "powered_by": "Your personal interview coach"
     }
 }
 
