@@ -98,7 +98,51 @@ def check_interview_complete(messages, total_questions):
     contains_final_assessment = re.search(r"(đánh giá tổng thể|overall assessment|final score|điểm số cuối cùng)", 
                                          last_message.lower())
     
-    return question_count >= total_questions or (contains_score and contains_final_assessment)
+    # Đảm bảo phỏng vấn không kết thúc nếu câu hỏi cuối cùng chưa được trả lời
+    if question_count >= total_questions:
+        # Kiểm tra xem câu hỏi cuối cùng đã có câu trả lời chưa
+        # Nếu tin nhắn cuối cùng là từ assistant và chứa câu hỏi cuối, 
+        # và không có câu trả lời của user sau đó, thì phỏng vấn chưa hoàn thành
+        if len(messages) >= 2:
+            last_msg = messages[-1]
+            if last_msg["role"] == "assistant" and re.search(f"(Câu hỏi|Question)\\s+{total_questions}", last_msg["content"]):
+                return False  # Chưa có câu trả lời cho câu hỏi cuối
+    
+    # For an interview to be complete:
+    # 1. We must have asked all questions
+    # 2. The last question must have been asked, answered, and received feedback
+    # 3. OR the interview has ended with a final assessment
+    
+    # For each question X (where X is from 1 to total_questions):
+    # - There should be an assistant message containing "Question X" or "Câu hỏi X"
+    # - Followed by a user response
+    # - Followed by assistant feedback
+    
+    # Check if the last question has been fully processed
+    if question_count == total_questions:
+        # Find the last question in the message history
+        last_question_index = -1
+        for i, msg in enumerate(messages):
+            if msg["role"] == "assistant" and re.search(f"(Câu hỏi|Question)\\s+{total_questions}", msg["content"]):
+                last_question_index = i
+        
+        # If we found the last question
+        if last_question_index >= 0:
+            # Check if there's a user response after the last question
+            if last_question_index + 1 < len(messages) and messages[last_question_index + 1]["role"] == "user":
+                # Check if there's assistant feedback after user's response
+                if last_question_index + 2 < len(messages) and messages[last_question_index + 2]["role"] == "assistant":
+                    # The interview has completed the full cycle for the last question
+                    return True
+                else:
+                    # Missing assistant feedback for the last question
+                    return False
+            else:
+                # Missing user response for the last question
+                return False
+    
+    # If we have a final assessment with score, consider the interview complete
+    return (contains_score and contains_final_assessment)
 
 def start_interview_session(interview_type, job_role=None, resume=None, num_questions=5, gemini_model=None, language="vi"):
     """
@@ -184,41 +228,72 @@ def interview_simulator_page(gemini_model):
         feedback_btn = "View detailed feedback"
         end_interview_msg = "The interview has ended. You can view detailed feedback or start over."
     
-    # Sidebar cho cài đặt phỏng vấn
-    with st.sidebar:
-        st.subheader(interview_type_label)
-        interview_type = st.selectbox(
-            "Type",
-            options=list(interview_options.keys()),
-            format_func=lambda x: interview_options[x],
-            key="interview_type"
-        )
-        
-        job_role = st.text_input(job_role_label, key="interview_job_role")
-        resume = st.text_area(resume_label, height=150, key="interview_resume")
-        
-        # Thêm lựa chọn số lượng câu hỏi
-        num_questions = st.slider(
-            questions_label, 
-            min_value=3, 
-            max_value=10, 
-            value=5,
-            step=1,
-            key="num_interview_questions"
-        )
-        
-        if st.button(start_btn, type="primary"):
-            # Reset session state
-            if "interview_messages" in st.session_state:
-                del st.session_state.interview_messages
-            if "interview_feedback" in st.session_state:
-                del st.session_state.interview_feedback
-            if "interview_completed" in st.session_state:
-                del st.session_state.interview_completed
+    # Hiển thị phần cài đặt phỏng vấn trong tab chính thay vì sidebar
+    if "interview_messages" not in st.session_state:
+        # Hiển thị tùy chọn cấu hình trong một container có viền
+        with st.expander("👉 Chọn loại phỏng vấn, số lượng câu hỏi và nhấn 'Bắt đầu phỏng vấn mới' để bắt đầu.", expanded=True):
+            # Sử dụng cột để bố trí giao diện
+            col1, col2 = st.columns([1, 1])
             
-            # Bắt đầu phiên phỏng vấn mới
-            start_interview_session(interview_type, job_role, resume, num_questions, gemini_model, language)
-            st.rerun()
+            with col1:
+                interview_type = st.selectbox(
+                    interview_type_label,
+                    options=list(interview_options.keys()),
+                    format_func=lambda x: interview_options[x],
+                    key="interview_type"
+                )
+                
+                job_role = st.text_input(job_role_label, key="interview_job_role")
+            
+            with col2:
+                # Thêm lựa chọn số lượng câu hỏi
+                num_questions = st.slider(
+                    questions_label, 
+                    min_value=3, 
+                    max_value=10, 
+                    value=5,
+                    step=1,
+                    key="num_interview_questions"
+                )
+                
+                resume = st.text_area(resume_label, height=100, key="interview_resume")
+            
+            # Nút bắt đầu phỏng vấn
+            start_col1, start_col2, start_col3 = st.columns([1, 2, 1])
+            with start_col2:
+                if st.button(start_btn, type="primary", use_container_width=True):
+                    # Reset session state
+                    if "interview_messages" in st.session_state:
+                        del st.session_state.interview_messages
+                    if "interview_feedback" in st.session_state:
+                        del st.session_state.interview_feedback
+                    if "interview_completed" in st.session_state:
+                        del st.session_state.interview_completed
+                    
+                    # Lưu thông tin về loại phỏng vấn và vai trò công việc
+                    selected_interview_type = interview_type
+                    # Sử dụng tên có ý nghĩa nếu không có vai trò công việc
+                    if not job_role or job_role.strip() == "":
+                        if language == "vi":
+                            selected_job_role = "Vị trí chung"
+                        else:
+                            selected_job_role = "General Position"
+                    else:
+                        selected_job_role = job_role
+                    
+                    # Lưu vào session state
+                    st.session_state.current_interview_type = selected_interview_type
+                    st.session_state.current_job_role = selected_job_role
+                    
+                    # Chuyển đổi tên hiển thị loại phỏng vấn cho đẹp hơn
+                    if language == "vi":
+                        st.session_state.current_interview_type_display = interview_options[selected_interview_type]
+                    else:
+                        st.session_state.current_interview_type_display = interview_options[selected_interview_type]
+                    
+                    # Bắt đầu phiên phỏng vấn mới
+                    start_interview_session(interview_type, job_role, resume, num_questions, gemini_model, language)
+                    st.rerun()
     
     # Hiển thị lịch sử tin nhắn và phần tương tác
     if "interview_messages" in st.session_state:
@@ -317,48 +392,121 @@ def get_feedback_on_interview(messages, gemini_model, language="vi"):
     """
     Lấy phản hồi chi tiết về buổi phỏng vấn
     """
-    # Chỉ lấy nội dung phỏng vấn, bỏ qua system prompt
-    interview_content = "\n\n".join([f"{msg['role'].upper()}: {msg['content']}" for msg in messages[1:]])
-    
     if language == "vi":
-        feedback_prompt = f"""Hãy phân tích buổi phỏng vấn sau đây và đưa ra phản hồi chi tiết:
+        prompt = """Vui lòng phân tích buổi phỏng vấn dựa trên các câu hỏi và câu trả lời được cung cấp. 
+Đánh giá điểm mạnh và điểm yếu của ứng viên và đưa ra điểm số tổng thể trên thang điểm 10.
+Hãy đánh giá từng kỹ năng riêng biệt (kỹ thuật, giao tiếp, giải quyết vấn đề, lãnh đạo) trên thang điểm 10.
+Đưa ra đánh giá theo định dạng:
 
-{interview_content}
+Điểm tổng thể: X/10
 
-Phản hồi nên bao gồm:
-1. Điểm mạnh trong câu trả lời của ứng viên
-2. Lĩnh vực cần cải thiện
-3. Các câu trả lời cụ thể mà ứng viên trả lời tốt và lý do
-4. Đề xuất cách trả lời hiệu quả hơn cho các câu hỏi khó
-5. Đánh giá tổng thể và chấm điểm buổi phỏng vấn (thang điểm 1-10)
+Kỹ năng kỹ thuật: X/10
+Kỹ năng giao tiếp: X/10
+Kỹ năng giải quyết vấn đề: X/10
+Kỹ năng lãnh đạo: X/10
 
-Đưa ra phản hồi chân thành, chi tiết và hữu ích để giúp ứng viên cải thiện kỹ năng phỏng vấn.
+Điểm mạnh:
+- Điểm mạnh 1
+- Điểm mạnh 2
+...
+
+Điểm yếu:
+- Điểm yếu 1
+- Điểm yếu 2
+...
+
+Gợi ý cải thiện:
+1. Gợi ý 1
+2. Gợi ý 2
+...
 """
     else:
-        feedback_prompt = f"""Analyze the following interview and provide detailed feedback:
+        prompt = """Please analyze the interview based on the questions and answers provided.
+Evaluate the candidate's strengths and weaknesses and provide an overall score on a scale of 1-10.
+Evaluate each skill separately (technical, communication, problem-solving, leadership) on a scale of 1-10.
+Format your assessment as follows:
 
-{interview_content}
+Overall Score: X/10
 
-Feedback should include:
-1. Strengths in the candidate's responses
-2. Areas for improvement
-3. Specific answers that the candidate handled well and why
-4. Suggestions for more effectively answering challenging questions
-5. Overall assessment and score for the interview (scale of 1-10)
+Technical skills: X/10
+Communication skills: X/10
+Problem-solving skills: X/10
+Leadership skills: X/10
 
-Provide honest, detailed, and helpful feedback to help the candidate improve their interviewing skills.
+Strengths:
+- Strength 1
+- Strength 2
+...
+
+Weaknesses:
+- Weakness 1
+- Weakness 2
+...
+
+Improvement suggestions:
+1. Suggestion 1
+2. Suggestion 2
+...
 """
+
+    # Tạo prompt cuối cùng
+    final_prompt = prompt + "\n\nĐây là nội dung cuộc phỏng vấn:" if language == "vi" else prompt + "\n\nHere is the interview content:"
     
-    # Tạo system prompt cho phản hồi
-    language_instruction = "Trả lời bằng tiếng Việt." if language == "vi" else "Answer in English."
-    system_prompt = f"{SYSTEM_PROMPT}\n\nBạn là một chuyên gia huấn luyện phỏng vấn với nhiều năm kinh nghiệm.\n\n{language_instruction}"
+    # Thêm nội dung cuộc phỏng vấn (bỏ qua system message)
+    for msg in messages:
+        if msg["role"] != "system":
+            role_display = "Người phỏng vấn" if msg["role"] == "assistant" else "Ứng viên"
+            role_display_en = "Interviewer" if msg["role"] == "assistant" else "Candidate"
+            
+            final_prompt += f"\n\n{role_display if language == 'vi' else role_display_en}: {msg['content']}"
     
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": feedback_prompt}
+    # Tạo message mới để lấy phản hồi
+    feedback_messages = [
+        {"role": "system", "content": "You are an experienced interview coach providing detailed feedback and assessment."},
+        {"role": "user", "content": final_prompt}
     ]
     
-    # Gọi API Gemini để lấy phản hồi
-    feedback = generate_response(gemini_model, messages)
+    # Lấy phản hồi từ AI
+    feedback = generate_response(gemini_model, feedback_messages)
+    
+    # Lưu phản hồi vào session state để sử dụng ở nơi khác
+    st.session_state.interview_feedback = feedback
+    
+    # Cập nhật điểm số vào hệ thống theo dõi tiến trình
+    try:
+        from progress_tracker import extract_scores_from_feedback, save_interview_results
+        
+        # Trích xuất điểm số từ phản hồi
+        scores = extract_scores_from_feedback(feedback, language)
+        
+        # Lấy thông tin về buổi phỏng vấn từ session state
+        interview_type = st.session_state.get("current_interview_type", None)
+        job_role = st.session_state.get("current_job_role", None)
+        
+        # Sử dụng tên hiển thị của loại phỏng vấn nếu có
+        if st.session_state.get("current_interview_type_display", None):
+            interview_type_display = st.session_state.current_interview_type_display
+        else:
+            # Chuyển đổi loại phỏng vấn sang định dạng hiển thị
+            if language == "vi":
+                interview_type_mapping = {
+                    "technical": "Phỏng vấn kỹ thuật",
+                    "behavioral": "Phỏng vấn hành vi",
+                    "hr": "Phỏng vấn HR",
+                    "case": "Phỏng vấn tình huống"
+                }
+            else:
+                interview_type_mapping = {
+                    "technical": "Technical Interview",
+                    "behavioral": "Behavioral Interview",
+                    "hr": "HR Interview",
+                    "case": "Case Interview"
+                }
+            interview_type_display = interview_type_mapping.get(interview_type, interview_type)
+        
+        # Lưu kết quả vào hệ thống theo dõi tiến trình
+        save_interview_results(scores, job_role, interview_type_display)
+    except Exception as e:
+        print(f"Error saving interview results: {e}")
     
     return feedback

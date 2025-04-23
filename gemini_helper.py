@@ -1,18 +1,33 @@
 import google.generativeai as genai
 import streamlit as st
+import os
 
-def initialize_gemini(api_key):
+# Import API key từ file cấu hình
+try:
+    from config import GEMINI_API_KEY as CONFIG_API_KEY
+except ImportError:
+    CONFIG_API_KEY = None
+
+def initialize_gemini(api_key=None):
     """
     Initialize the Gemini API client
     
     Args:
-        api_key (str): API key for Gemini
+        api_key (str, optional): API key for Gemini. 
+                                If None, will try from environment or config file.
         
     Returns:
         genai.GenerativeModel: The initialized Gemini model
     """
     try:
-        genai.configure(api_key=api_key)
+        # Ưu tiên lấy API key theo thứ tự: tham số > biến môi trường > config file
+        key_to_use = api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or CONFIG_API_KEY
+        
+        if not key_to_use:
+            st.error("Không tìm thấy API key cho Gemini. Vui lòng thiết lập trong file config.py")
+            return None
+            
+        genai.configure(api_key=key_to_use)
         
         # Initialize the generative model with appropriate settings
         # Using the newer gemini-2.0-flash model for improved performance

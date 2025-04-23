@@ -12,8 +12,7 @@ from file_processor import process_file  # Sửa thành tên hàm đúng
 from prompts import get_interview_context_prompt, SYSTEM_PROMPT
 
 # Khởi tạo Gemini API
-api_key = os.getenv("GEMINI_API_KEY")
-gemini_model = initialize_gemini(api_key)
+gemini_model = initialize_gemini()
 
 # Định nghĩa các model dữ liệu
 class DocumentRequest(BaseModel):
@@ -217,7 +216,7 @@ Tiến hành phân tích khoảng cách kỹ năng chi tiết {language_prompt} 
 
 # Hàm để chạy API độc lập
 def run_api():
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="localhost", port=8000)
 
 if __name__ == "__main__":
     run_api()

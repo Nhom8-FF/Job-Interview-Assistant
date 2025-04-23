@@ -1,6 +1,6 @@
 # 3D Job Interview Assistant
 
-A modern 3D job interview assistance chatbot using Python, Streamlit, and the Gemini API with file analysis capabilities.
+A modern job interview assistance chatbot using Python, Streamlit, and the Gemini API with file analysis capabilities.
 
 ## Features
 
@@ -21,15 +21,9 @@ A modern 3D job interview assistance chatbot using Python, Streamlit, and the Ge
    ```
    pip install streamlit google-generativeai PyPDF2 python-docx pandas pillow
    ```
-3. Set up your Gemini API key as an environment variable:
+3. Run the application:
    ```
-   export GEMINI_API_KEY="your_api_key_here"
-   ```
-   (The application will use the provided default key if none is specified)
-
-4. Run the application:
-   ```
-   streamlit run app.py
+   python -m streamlit run app.py
    ```
 
 ## Usage
